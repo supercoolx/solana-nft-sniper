@@ -1,4 +1,8 @@
 body {
-    background-color: #222222;
+    background-color: #303030;
     color: white;
+}
+
+select, .css-26l3qy-menu * {
+    color: black
 }
