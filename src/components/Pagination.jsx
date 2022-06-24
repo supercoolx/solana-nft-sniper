@@ -15,7 +15,7 @@ const Pagination = ({ current, total, onChange }) => {
         <Page
             showTitle={false}
             showLessItems={true}
-            pageSize={20}
+            pageSize={12}
             total={total}
             current={current}
             itemRender={renderer}

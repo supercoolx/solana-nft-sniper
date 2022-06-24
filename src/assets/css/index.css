@@ -3,6 +3,6 @@ body {
     color: white;
 }
 
-select, .css-26l3qy-menu * {
+select, input, .css-26l3qy-menu * {
     color: black
 }
