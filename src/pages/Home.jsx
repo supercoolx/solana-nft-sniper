@@ -12,7 +12,7 @@ function Home() {
 	}, []);
 
 	return (
-		<div className='container min-h-screen mx-auto'>
+		<div className='container min-h-screen pb-5 mx-auto'>
 			<div className='grid grid-cols-5 gap-5 mt-5'>
 				{
 					collections.map((col, key) => <NFTDetail collection={col} key={key} />)
