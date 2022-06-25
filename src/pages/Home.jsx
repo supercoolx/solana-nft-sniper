@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import Header from 'components/Header';
 import NFTDetail from 'components/NFTDetail';
 
 function Home() {
@@ -14,7 +13,6 @@ function Home() {
 
 	return (
 		<div className='container min-h-screen mx-auto'>
-			<Header />
 			<div className='grid grid-cols-5 gap-5 mt-5'>
 				{
 					collections.map((col, key) => <NFTDetail collection={col} key={key} />)
