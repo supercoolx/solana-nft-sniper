@@ -29,9 +29,10 @@ const Header = () => {
             <Link to='/'>
                 <img src={logo} className='w-10 h-10' alt='' />
             </Link>
-            <div className='flex items-center gap-3'>
+            <div className='relative flex items-center gap-3'>
                 <div>Search:</div>
-                <input value={query} onChange={onChange} onKeyDown={onKeyDown} ref={inputDom} type='text' className='px-3 py-1 bg-transparent border rounded-md w-96' />
+                <input value={query} onChange={onChange} onKeyDown={onKeyDown} ref={inputDom} type='text' placeholder='Input symbol here..' className='px-3 py-1 bg-transparent border rounded-md outline-none w-96 focus:border-green-600 caret-green-600' />
+                <span className='absolute px-2 font-bold bg-green-700 border rounded right-1'>/</span>
             </div>
         </div>
     )
