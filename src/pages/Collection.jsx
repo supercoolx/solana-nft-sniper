@@ -5,21 +5,33 @@ import NFTCard from 'components/NFTCard';
 import Pagination from 'components/Pagination';
 
 const Collection = () => {
+    const emptyArray = [];
     const { symbol } = useParams();
     const [collection, setCollection] = useState(null);
     const [items, setItems] = useState([]);
     const [page, setPage] = useState(1);
-    const [checked, setChecked] = useState([]);
-    const [filter, setFilter] = useState({$match:{collectionSymbol:symbol},$sort:{createdAt:-1},$skip:0,$limit:12,status:[]});
+    const [checked, setChecked] = useState(emptyArray);
+    const [filter, setFilter] = useState();
     const [availableAttributes, setAvailableAttributes] = useState({});
     const [attributes, setAttributes] = useState({});
+    const [query, setQuery] = useState('');
     const [values, setValues] = useState([]);
 
     const onChangeAttribute = e => setValues(attributes[e.target.value]);
+    const onChangePage = (page) => setPage(page);
+    const changeTraits = (e) => {
+        if (e.target.checked) setChecked([...checked, e.target.value]);
+        else setChecked(checked.filter(i => i !== e.target.value));
+    }
+    const onKeyDown = (e) => {
+        e.stopPropagation();
+        e.keyCode === 13 && setQuery(e.target.value.trim());
+    }
 
     useEffect(() => {
-        setItems([]);
-        setFilter({$match:{collectionSymbol:symbol},$sort:{createdAt:-1},$skip:0,$limit:12,status:[]});
+        setChecked(emptyArray);
+        setPage(1);
+        setQuery('');
         axios.get(`https://api-mainnet.magiceden.dev/v2/collections/${symbol}`)
             .then(res => setCollection(res.data))
             .catch(() => setCollection({}));
@@ -42,7 +54,9 @@ const Collection = () => {
             .catch(console.error);
     }, [symbol]);
     useEffect(() => {
-        let option = {$match:{collectionSymbol:symbol},$sort:{createdAt:-1},$skip:0,$limit:12,status:[]}
+        let option = {$match:{collectionSymbol:symbol},$sort:{createdAt:-1},$limit:12,status:[]};
+        option.$skip = page ? (page - 1) * 12 : 0;
+        query && (option.$match.$text = { $search: query });
         if (checked.length) option.$match.$and = [];
         let opt = {};
         checked.forEach(f => {
@@ -61,34 +75,13 @@ const Collection = () => {
             }));
         });
         setItems([]);
-        setPage(1);
         setFilter(option);
-    }, [checked]);
+    }, [checked, query, page]);
     useEffect(() => {
-        axios.get(`https://api-mainnet.magiceden.io/rpc/getListedNFTsByQueryLite?q=${JSON.stringify(filter)}`)
+        filter && axios.get(`https://api-mainnet.magiceden.io/rpc/getListedNFTsByQueryLite?q=${JSON.stringify(filter)}`)
             .then(res => setItems(res.data.results))
             .catch(console.error);
     }, [filter]);
-    const onChangePage = (page) => {
-        setItems([]);
-        axios.get(`https://api-mainnet.magiceden.io/rpc/getListedNFTsByQueryLite?q={"$match":{"collectionSymbol":"${symbol}"},"$skip":${(page - 1) * 12},"$limit":12}`)
-            .then(res => setItems(res.data.results))
-            .catch(console.error);
-        setPage(page);
-    }
-    const changeFilter = (e) => {
-        if (e.target.checked) setChecked([...checked, e.target.value]);
-        else setChecked(checked.filter(i => i !== e.target.value));
-    }
-    const onKeyDown = (e) => {
-        e.stopPropagation();
-        if (e.keyCode === 13) {
-            let query = e.target.value.trim();
-            if (query) {
-                setFilter({$match:{collectionSymbol:symbol,$text:{$search:query}},$sort:{createdAt:-1},$skip:0,$limit:20,status:[]});
-            }
-        }
-    }
 
     if (!collection) return <div className='container mx-auto'>Loading..</div>
 
@@ -114,7 +107,7 @@ const Collection = () => {
                         {
                             values.map((value, key) => (
                                 <label key={key} className='flex items-center gap-3'>
-                                    <input type='checkbox' onChange={changeFilter} value={value.id} checked={checked.includes(`${value.id}`)} />
+                                    <input type='checkbox' onChange={changeTraits} value={value.id} checked={checked.includes(`${value.id}`)} />
                                     <span>{value.value} ({value.count})</span>
                                 </label>
                             ))

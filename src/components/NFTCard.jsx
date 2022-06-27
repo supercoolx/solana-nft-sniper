@@ -9,7 +9,12 @@ const NFTCard = ({data}) => {
             </div>
             <div className='pt-2'>
                 <div className='text-lg'>{data.title}</div>
-                <div className='text-sm text-green-400'>{data.price} SOL</div>
+                <div className='flex items-end justify-between pt-2'>
+                    <div><span className='text-green-400'>{data.price}</span> SOL</div>
+                    {
+                        data.rarity.howrare && <div className='text-sm'>Rarity rank: <span className='text-sm text-green-400'>{data.rarity.howrare.rank}</span></div>
+                    }
+                </div>
             </div>
         </a>
     )
