@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
+import * as web3 from '@solana/web3.js';
 import { useParams } from 'react-router-dom';
 import NFTCard from 'components/NFTCard';
 import Pagination from 'components/Pagination';
 
 const Collection = () => {
-    const emptyArray = [];
+    const emptyArray = useMemo(() => [], []);
     const { symbol } = useParams();
     const [collection, setCollection] = useState(null);
     const [items, setItems] = useState([]);
@@ -16,9 +17,16 @@ const Collection = () => {
     const [attributes, setAttributes] = useState({});
     const [query, setQuery] = useState('');
     const [values, setValues] = useState([]);
+    const [min, setMin] = useState('');
+    const [max, setMax] = useState('');
 
     const onChangeAttribute = e => setValues(attributes[e.target.value]);
     const onChangePage = (page) => setPage(page);
+    const onClickFind = (e) => {
+        e.preventDefault();
+        setMin(e.target.min.value);
+        setMax(e.target.max.value);
+    }
     const changeTraits = (e) => {
         if (e.target.checked) setChecked([...checked, e.target.value]);
         else setChecked(checked.filter(i => i !== e.target.value));
@@ -32,6 +40,8 @@ const Collection = () => {
         setChecked(emptyArray);
         setPage(1);
         setQuery('');
+        setMin('');
+        setMax('');
         axios.get(`https://api-mainnet.magiceden.dev/v2/collections/${symbol}`)
             .then(res => setCollection(res.data))
             .catch(() => setCollection({}));
@@ -52,12 +62,16 @@ const Collection = () => {
                 setAttributes(attr);
             })
             .catch(console.error);
-    }, [symbol]);
+    }, [symbol, emptyArray]);
+
     useEffect(() => {
         let option = {$match:{collectionSymbol:symbol},$sort:{createdAt:-1},$limit:12,status:[]};
         option.$skip = page ? (page - 1) * 12 : 0;
         query && (option.$match.$text = { $search: query });
         if (checked.length) option.$match.$and = [];
+        if (min || max) option.$match.takerAmount = {};
+        if (min) option.$match.takerAmount.$gte = min * web3.LAMPORTS_PER_SOL;
+        if (max) option.$match.takerAmount.$lte = max * web3.LAMPORTS_PER_SOL;
         let opt = {};
         checked.forEach(f => {
             if (!opt[availableAttributes[f].attribute.trait_type]) opt[availableAttributes[f].attribute.trait_type] = [];
@@ -76,7 +90,7 @@ const Collection = () => {
         });
         setItems([]);
         setFilter(option);
-    }, [checked, query, page]);
+    }, [checked, query, page, min, max]);
     useEffect(() => {
         filter && axios.get(`https://api-mainnet.magiceden.io/rpc/getListedNFTsByQueryLite?q=${JSON.stringify(filter)}`)
             .then(res => setItems(res.data.results))
@@ -99,6 +113,13 @@ const Collection = () => {
                     </div>
                 </div>
                 <div className='w-full px-5 pt-5 pb-3 mt-5 rounded-md shadow-md bg-neutral-800'>
+                    <form onSubmit={onClickFind} className='flex items-center justify-between pb-3'>
+                        <input type='number' id='min' className='w-20 pl-2 bg-transparent border rounded-md outline-none appearance-none' />
+                        <span>~</span>
+                        <input type='number' id='max' className='w-20 pl-2 bg-transparent border rounded-md outline-none appearance-none' />
+                        <span>SOL</span>
+                        <button className='px-3 ml-3 border rounded-md'>Find</button>
+                    </form>
                     <select defaultValue='' onChange={onChangeAttribute} className='w-full px-3 py-1 border rounded-md'>
                         <option value='' disabled>Select traits</option>
                         {Object.keys(attributes).map(key => <option value={key} key={key}>{key}</option>)}

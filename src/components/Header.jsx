@@ -18,8 +18,10 @@ const Header = () => {
 
     useEffect(() => {
         window.addEventListener('keydown', (e) => {
-            e.preventDefault();
-            if (e.keyCode === 191) inputDom.current.focus();
+            if (e.keyCode === 191) {
+                e.preventDefault();
+                inputDom.current.focus();
+            }
         })
         return () => window.removeEventListener('keydown', null);
     }, []);
