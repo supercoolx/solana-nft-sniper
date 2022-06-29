@@ -6,9 +6,7 @@ function Home() {
 	const [collections, setCollections] = useState([]);
 	
 	useEffect(() => {
-		axios.get('https://api-mainnet.magiceden.dev/v2/collections?limit=15', {
-			headers: { 'Access-Control-Allow-Origin': '*' }
-		})
+		axios.get('https://api-mainnet.magiceden.dev/v2/collections?limit=15')
 			.then(res => setCollections(res.data))
 			.catch(console.error);
 	}, []);
