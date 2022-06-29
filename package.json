@@ -2,7 +2,6 @@
   "name": "magic-eden-sniper",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://supercoolx.github.io/magiceden-sniper",
   "dependencies": {
     "@metaplex/js": "^4.12.0",
     "@solana/web3.js": "^1.44.3",
@@ -19,8 +18,6 @@
     "react-select": "^5.3.2"
   },
   "scripts": {
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d build",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
@@ -43,8 +40,5 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  },
-  "devDependencies": {
-    "gh-pages": "^4.0.0"
   }
 }

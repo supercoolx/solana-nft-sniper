@@ -2,7 +2,7 @@ const solanaWeb3 = require('@solana/web3.js');
 const { Connection, programs } = require('@metaplex/js');
 const axios = require('axios');
 
-const projectAddress = 'M2mx93ekt1fmXSVkTrUL9xVFHkmME8HTUi5Cyc5aF7K';
+const projectAddress = '4ECurpxLuMYXS4FmPHXwsM8XQgdzMJ6CKXiZ3xNggvwa';
 
 const projectPubKey = new solanaWeb3.PublicKey(projectAddress);
 const url = solanaWeb3.clusterApiUrl('mainnet-beta');
@@ -17,48 +17,29 @@ const marketplaceMap = {
 const runSalesBot = async () => {
     console.log("starting sales bot...");
 
-    let signatures;
-    const option = {};
-    while (true) {
-        try{
-            signatures = await solanaConnection.getSignaturesForAddress(projectPubKey, option);
-            if (!signatures.length) {
-                console.log('polling...');
-                await timer(3000);
-                continue;
-            }
-        } catch (err) {
-            console.log('Error fetching signatures:', err.message);
-            continue;
+    const signature = '42ZxZskUgLNWQgjryVemUVaHCRLjsbnQtv2pSg87oFyNgY2W9U6MXk16zPiFYwQNTUB9t2reoE8pmxGwDnfakKSD';
+    const txn = await solanaConnection.getTransaction(signature);
+    if (txn.meta && txn.meta.err != null) return;
+
+    const dateString = new Date(txn.blockTime * 1000).toLocaleString();
+    console.log('data', dateString);
+    const accounts = txn.transaction.message.accountKeys;
+    console.log('Owner', accounts[0].toString());
+    console.log('Token', txn.meta.postTokenBalances[0].mint);
+    const marketplaceAccount = accounts[accounts.length - 1].toString();
+    console.log('marketplace', marketplaceAccount);
+
+    if (marketplaceMap[marketplaceAccount]) {
+        const metadata = await getMetadata(txn.meta.postTokenBalances[0].mint);
+        if (!metadata) {
+            console.log("couldn't get metadata");
+            return;
         }
 
-        // for (let i = signatures.length - 1; i >= 0; i--) {
-            try{
-                let { signature } = signatures[0];
-                const tx = await solanaConnection.getTransaction(signature);
-                console.log(tx);
-                console.log('Transaction:', signature);
-                if (!tx.meta || tx.meta.err) {
-                    console.log('Empty or error transaction.');
-                    continue;
-                }
-
-                console.log('DateTime:', new Date(tx.blockTime * 1000).toLocaleString());
-                const balanceChange = tx.meta.preBalances[0] - tx.meta.postBalances[0];
-                if (balanceChange < 0) {
-                    console.log('Unlisting action.');
-                    continue;
-                }
-                console.log('Owner:', tx.transaction.message.accountKeys[0].toString());
-                console.log('Token:', tx.meta.postTokenBalances[0].mint);
-            }
-            catch(err) {
-                console.log('Error fetching transaction:', err.message);
-                continue;
-            }
-        // }
-
-        option.until = signatures[0].signature;
+        console.log(metadata);
+        // await postSaleToDiscord(metadata.name, price, dateString, signature, metadata.image)
+    } else {
+        console.log("not a supported marketplace sale");
     }
 }
 runSalesBot();
