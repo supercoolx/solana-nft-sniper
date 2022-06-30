@@ -1,101 +1,85 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import * as web3 from '@solana/web3.js';
-import { useParams } from 'react-router-dom';
 import NFTCard from 'components/NFTCard';
-import Pagination from 'components/Pagination';
+import { useParams } from 'react-router-dom';
+import InfiniteScroll from 'react-infinite-scroll-component';
 
 const Collection = () => {
-    const emptyArray = useMemo(() => [], []);
+    const pageSize = 20;
     const { symbol } = useParams();
     const [collection, setCollection] = useState(null);
     const [items, setItems] = useState([]);
+    const [filter, setFilter] = useState({price_range:{currency:'sol'},rarity_range:{},traits:{}});
+    const [trait, setTrait] = useState({});
+    const [order, setOrder] = useState('price_asc');
+    const [attr, setAttr] = useState('');
     const [page, setPage] = useState(1);
-    const [checked, setChecked] = useState(emptyArray);
-    const [filter, setFilter] = useState();
-    const [availableAttributes, setAvailableAttributes] = useState({});
-    const [attributes, setAttributes] = useState({});
-    const [query, setQuery] = useState('');
-    const [values, setValues] = useState([]);
-    const [min, setMin] = useState('');
-    const [max, setMax] = useState('');
+    const [hasMore, setHasMore] = useState(true);
 
-    const onChangeAttribute = e => setValues(attributes[e.target.value]);
-    const onChangePage = (page) => setPage(page);
-    const onClickFind = (e) => {
+    const onChangeAttribute = e => setAttr(e.target.value);
+    const onChangePriceRange = (e) => {
         e.preventDefault();
-        setMin(e.target.min.value);
-        setMax(e.target.max.value);
+        setFilter(filter => {
+            let _filter = Object.assign({}, filter);
+            e.target.min_price.value ? _filter.price_range.min_price = e.target.min_price.value : delete _filter.price_range.min_price;
+            e.target.max_price.value ? _filter.price_range.max_price = e.target.max_price.value : delete _filter.price_range.max_price;
+            return _filter;
+        });
     }
-    const changeTraits = (e) => {
-        if (e.target.checked) setChecked([...checked, e.target.value]);
-        else setChecked(checked.filter(i => i !== e.target.value));
+    const onChangeRarityRange = (e) => {
+        e.preventDefault();
+        setFilter(filter => {
+            let _filter = Object.assign({}, filter);
+            e.target.min.value ? _filter.rarity_range.min = e.target.min.value : delete _filter.rarity_range.min;
+            e.target.max.value ? _filter.rarity_range.max = e.target.max.value : delete _filter.rarity_range.max;
+            return _filter;
+        });
     }
-    const onKeyDown = (e) => {
-        e.stopPropagation();
-        e.keyCode === 13 && setQuery(e.target.value.trim());
+    const changeTraits = (key) => {
+        return (e) => {
+            let _filter = Object.assign({}, filter);
+            if (e.target.checked) {
+                if (!_filter.traits[key]) _filter.traits[key] = [];
+                _filter.traits[key].push(e.target.value);
+            }
+            else {
+                let index = _filter.traits[key].indexOf(e.target.value);
+                index > -1 && _filter.traits[key].splice(index, 1);
+                !_filter.traits[key].length && delete _filter.traits[key];
+            }
+            setFilter(_filter);
+        }
     }
-
-    useEffect(() => {
-        setChecked(emptyArray);
-        setPage(1);
-        setQuery('');
-        setMin('');
-        setMax('');
-        axios.get(`https://api-mainnet.magiceden.dev/v2/collections/${symbol}`)
-            .then(res => setCollection(res.data))
-            .catch(() => setCollection({}));
-        axios.get(`https://api-mainnet.magiceden.io/rpc/getCollectionEscrowStats/${symbol}`)
+    const onChangeOrder = (e) => setOrder(e.target.value);
+    const fetch = () => {
+        axios.post(`https://api.coralcube.io/v1/getItems?offset=${page * pageSize}&page_size=${pageSize}&ranking=${order}&symbol=${symbol}`, filter)
             .then(res => {
-                setAvailableAttributes(res.data.results.availableAttributes);
-                let attr = {};
-                res.data.results.availableAttributes.forEach((item, key) => {
-                    if (!attr[item.attribute.trait_type]) attr[item.attribute.trait_type] = [];
-                    attr[item.attribute.trait_type].push({
-                        id: key,
-                        count: item.count,
-                        floor: item.floor,
-                        type: item.attribute.trait_type,
-                        value: item.attribute.value
-                    });
-                });
-                setAttributes(attr);
+                setItems(items.concat(res.data.items));
+                setPage(page + 1);
+				res.data.items.length < pageSize && setHasMore(false);
             })
             .catch(console.error);
-    }, [symbol, emptyArray]);
+    }
 
     useEffect(() => {
-        let option = {$match:{collectionSymbol:symbol},$sort:{createdAt:-1},$limit:12,status:[]};
-        option.$skip = page ? (page - 1) * 12 : 0;
-        query && (option.$match.$text = { $search: query });
-        if (checked.length) option.$match.$and = [];
-        if (min || max) option.$match.takerAmount = {};
-        if (min) option.$match.takerAmount.$gte = min * web3.LAMPORTS_PER_SOL;
-        if (max) option.$match.takerAmount.$lte = max * web3.LAMPORTS_PER_SOL;
-        let opt = {};
-        checked.forEach(f => {
-            if (!opt[availableAttributes[f].attribute.trait_type]) opt[availableAttributes[f].attribute.trait_type] = [];
-            opt[availableAttributes[f].attribute.trait_type].push(availableAttributes[f].attribute.value);
-        });
-        Object.keys(opt).forEach((key, i) => {
-            option.$match.$and.push({ $or: [] });
-            opt[key].forEach(v => option.$match.$and[i].$or.push({
-                attributes: {
-                    $elemMatch: {
-                        trait_type: key,
-                        value: v
-                    }
-                }
-            }));
-        });
-        setItems([]);
-        setFilter(option);
-    }, [checked, query, page, min, max]);
+        axios.get(`https://api.coralcube.io/v1/getCollectionAttributes?symbol=${symbol}`)
+            .then(res => {
+                setTrait(res.data.schema.properties.traits.properties);
+            })
+            .catch(() => setTrait({}));
+    }, [symbol]);
     useEffect(() => {
-        filter && axios.get(`https://api-mainnet.magiceden.io/rpc/getListedNFTsByQueryLite?q=${JSON.stringify(filter)}`)
-            .then(res => setItems(res.data.results))
-            .catch(console.error);
-    }, [filter]);
+        setItems([]);
+        setPage(1);
+		setHasMore(true);
+        axios.post(`https://api.coralcube.io/v1/getItems?offset=0&page_size=${pageSize}&ranking=${order}&symbol=${symbol}`, filter)
+            .then(res => {
+                setCollection(res.data.collection);
+                setItems(res.data.items);
+				res.data.items.length < pageSize && setHasMore(false);
+            })
+            .catch(() => setCollection({}));
+    }, [filter, order]);
 
     if (!collection) return <div className='container mx-auto'>Loading..</div>
 
@@ -105,31 +89,43 @@ const Collection = () => {
                 <div className='px-5 py-3 rounded-md shadow-md bg-neutral-800'>
                     <img src={collection.image} className='w-20 h-20 rounded-md' alt='' />
                     <div className='flex flex-col pt-5'>
-                        <div>Name: <span className='text-xl font-bold text-green-400'>{collection.name}</span></div>
+                        <div className='text-xl font-bold text-green-400'>{collection.name}</div>
                         {collection.website && <a href={collection.website} className='text-blue-500 underline' target='_blank' rel='noreferrer'>{collection.website}</a>}
-                        <div>Floor Price: <span className='text-xl font-bold text-green-400'>{collection.floorPrice / 1000000000 || '---'}</span> SOL</div>
-                        <div>Listed Count: <span className='text-xl font-bold text-green-400'>{collection.listedCount}</span></div>
+                        <div>Floor Price: <span className='text-xl font-bold text-green-400'>{collection.floor_price / 1000000000 || '---'}</span> SOL</div>
+                        <div>Listed Count: <span className='text-xl font-bold text-green-400'>{collection.listed_count}</span></div>
+                        <div>Total Count: <span className='text-xl font-bold text-green-400'>{collection.total_count}</span></div>
                         <div className='pt-2 text-sm text-gray-300'>{collection.description}</div>
                     </div>
                 </div>
                 <div className='w-full px-5 pt-5 pb-3 mt-5 rounded-md shadow-md bg-neutral-800'>
-                    <form onSubmit={onClickFind} className='flex items-center justify-between pb-3'>
-                        <input type='number' id='min' className='w-20 pl-2 bg-transparent border rounded-md outline-none appearance-none' />
-                        <span>~</span>
-                        <input type='number' id='max' className='w-20 pl-2 bg-transparent border rounded-md outline-none appearance-none' />
-                        <span>SOL</span>
-                        <button className='px-3 ml-3 border rounded-md'>Find</button>
+                    <form onSubmit={onChangePriceRange} className='flex items-center justify-between pb-3'>
+                        <span>Price:</span>
+                        <div>
+                            <input type='number' id='min_price' className='w-16 pl-2 bg-transparent border rounded-md outline-none appearance-none' />
+                            <span className='px-2'>~</span>
+                            <input type='number' id='max_price' className='w-16 pl-2 bg-transparent border rounded-md outline-none appearance-none' />
+                            <button className='px-3 ml-3 border rounded-md'>Find</button>
+                        </div>
+                    </form>
+                    <form onSubmit={onChangeRarityRange} className='flex items-center justify-between pb-3'>
+                        <span>Rarity:</span>
+                        <div>
+                            <input type='number' id='min' className='w-16 pl-2 bg-transparent border rounded-md outline-none appearance-none' />
+                            <span className='px-2'>~</span>
+                            <input type='number' id='max' className='w-16 pl-2 bg-transparent border rounded-md outline-none appearance-none' />
+                            <button className='px-3 ml-3 border rounded-md'>Find</button>
+                        </div>
                     </form>
                     <select defaultValue='' onChange={onChangeAttribute} className='w-full px-3 py-1 border rounded-md'>
-                        <option value='' disabled>Select traits</option>
-                        {Object.keys(attributes).map(key => <option value={key} key={key}>{key}</option>)}
+                        <option value='' className='hidden' disabled>Select traits</option>
+                        {Object.keys(trait).map(key => <option value={key} key={key}>{key}</option>)}
                     </select>
                     <div className='flex flex-col items-start pt-3 pl-3'>
                         {
-                            values.map((value, key) => (
+                            attr && Object.keys(trait[attr].trait_count).map(key => (
                                 <label key={key} className='flex items-center gap-3'>
-                                    <input type='checkbox' onChange={changeTraits} value={value.id} checked={checked.includes(`${value.id}`)} />
-                                    <span>{value.value} ({value.count})</span>
+                                    <input type='checkbox' onChange={changeTraits(attr)} value={key} />
+                                    <span>{key} ({trait[attr].trait_count[key]})</span>
                                 </label>
                             ))
                         }
@@ -137,15 +133,18 @@ const Collection = () => {
                 </div>
             </div>
             <div className='flex-1'>
-                <div className='flex items-center justify-between pb-5'>
-                    <input onKeyDown={onKeyDown} type='text' placeholder='search..' className='px-3 py-1 bg-transparent border rounded-md outline-none w-50 focus:border-green-600 caret-green-600' />
-                    <Pagination current={page} total={collection?.listedCount || 0} onChange={onChangePage} />
+                <div className='flex items-center justify-end pb-5'>
+                    <select value={order} onChange={onChangeOrder} className='px-3 py-1 border rounded-md'>
+                        <option value='price_asc'>Price: Low to High</option>
+                        <option value='price_desc'>Price: High to Low</option>
+                        <option value='recently_listed'>Recently Listed</option>
+                        <option value='rarity_asc'>Rarity: Rare to Common</option>
+                        <option value='rarity_desc'>Rarity: Common to Rair</option>
+                    </select>
                 </div>
-                <div className='grid grid-cols-4 gap-5'>
-                    {
-                        items.map((item, key) => <NFTCard data={item} key={key} />)
-                    }
-                </div>
+                <InfiniteScroll dataLength={items.length} next={fetch} hasMore={hasMore} className='grid grid-cols-4 gap-5'>
+                    { items.map((item, key) => <NFTCard data={item} key={key} />) }
+                </InfiniteScroll>
             </div>
         </div>
     )

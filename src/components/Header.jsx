@@ -11,7 +11,7 @@ const Header = () => {
     const onKeyDown = e => {
         e.stopPropagation();
         if (e.keyCode === 13) {
-            if (e.target.value.trim()) navigate('/collection/' + e.target.value.trim());
+            if (e.target.value.trim()) navigate('/?q=' + e.target.value.trim());
             else navigate('/');
         }
     }
@@ -33,7 +33,7 @@ const Header = () => {
             </Link>
             <div className='relative flex items-center gap-3'>
                 <div>Search:</div>
-                <input value={query} onChange={onChange} onKeyDown={onKeyDown} ref={inputDom} type='text' placeholder='Input symbol here..' className='px-3 py-1 bg-transparent border rounded-md outline-none w-96 focus:border-green-600 caret-green-600' />
+                <input value={query} onChange={onChange} onKeyDown={onKeyDown} ref={inputDom} type='text' placeholder='Search collections..' className='px-3 py-1 bg-transparent border rounded-md outline-none w-96 focus:border-green-600 caret-green-600' />
                 <span className='absolute px-2 font-bold bg-green-700 border rounded right-1'>/</span>
             </div>
         </div>
