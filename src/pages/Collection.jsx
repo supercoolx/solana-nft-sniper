@@ -9,7 +9,7 @@ const Collection = () => {
     const { symbol } = useParams();
     const [collection, setCollection] = useState(null);
     const [items, setItems] = useState([]);
-    const [filter, setFilter] = useState({price_range:{currency:'sol'},rarity_range:{},traits:{}});
+    const [filter, setFilter] = useState({price_range:{currency:'sol'},rarity_range:{},traits:{},listing_status:[]});
     const [trait, setTrait] = useState({});
     const [order, setOrder] = useState('price_asc');
     const [attr, setAttr] = useState('');
@@ -17,6 +17,15 @@ const Collection = () => {
     const [hasMore, setHasMore] = useState(true);
 
     const onChangeAttribute = e => setAttr(e.target.value);
+    const onClickListed = e => {
+        setFilter(filter => {
+            let _filter = Object.assign({}, filter);
+            let index = _filter.listing_status.indexOf(e.target.value);
+            if (!e.target.checked && index > -1) _filter.listing_status.splice(index, 1);
+            if (e.target.checked) _filter.listing_status.push(e.target.value);
+            return _filter;
+        });
+    }
     const onChangePriceRange = (e) => {
         e.preventDefault();
         setFilter(filter => {
@@ -97,38 +106,50 @@ const Collection = () => {
                         <div className='pt-2 text-sm text-gray-300'>{collection.description}</div>
                     </div>
                 </div>
-                <div className='w-full px-5 pt-5 pb-3 mt-5 rounded-md shadow-md bg-neutral-800'>
-                    <form onSubmit={onChangePriceRange} className='flex items-center justify-between pb-3'>
-                        <span>Price:</span>
+                <div className='w-full px-5 mt-5 divide-y divide-green-400 rounded-md shadow-md bg-neutral-800'>
+                    <div className='flex py-5'>
+                        <div className='flex w-full'>
+                            <input onClick={onClickListed} type='checkbox' id='filter_listed' value='listed' className='hidden peer' />
+                            <label htmlFor='filter_listed' className='w-full text-center border-2 cursor-pointer peer-checked:text-green-400 peer-checked:font-bold rounded-l-md peer-checked:border-green-400'>Listed</label>
+                        </div>
+                        <div className='flex w-full'>
+                            <input onClick={onClickListed} type='checkbox' id='filter_unlisted' value='unlisted' className='hidden peer' />
+                            <label htmlFor='filter_unlisted' className='w-full text-center border-2 cursor-pointer peer-checked:text-green-400 peer-checked:font-bold rounded-r-md peer-checked:border-green-400'>Unlisted</label>
+                        </div>
+                    </div>
+                    <form onSubmit={onChangePriceRange} className='flex items-center justify-between py-5'>
+                        <span className='font-bold text-green-400'>Price:</span>
                         <div>
-                            <input type='number' id='min_price' className='w-16 pl-2 bg-transparent border rounded-md outline-none appearance-none' />
+                            <input type='number' id='min_price' className='w-16 pl-2 bg-transparent border rounded-md outline-none appearance-none focus:border-green-400' />
                             <span className='px-2'>~</span>
-                            <input type='number' id='max_price' className='w-16 pl-2 bg-transparent border rounded-md outline-none appearance-none' />
-                            <button className='px-3 ml-3 border rounded-md'>Find</button>
+                            <input type='number' id='max_price' className='w-16 pl-2 bg-transparent border rounded-md outline-none appearance-none focus:border-green-400' />
+                            <button className='px-3 ml-3 text-green-400 border border-green-400 rounded-md'>Find</button>
                         </div>
                     </form>
-                    <form onSubmit={onChangeRarityRange} className='flex items-center justify-between pb-3'>
-                        <span>Rarity:</span>
+                    <form onSubmit={onChangeRarityRange} className='flex items-center justify-between py-5'>
+                        <span className='font-bold text-green-400'>Rarity:</span>
                         <div>
-                            <input type='number' id='min' className='w-16 pl-2 bg-transparent border rounded-md outline-none appearance-none' />
+                            <input type='number' id='min' className='w-16 pl-2 bg-transparent border rounded-md outline-none appearance-none focus:border-green-400' />
                             <span className='px-2'>~</span>
-                            <input type='number' id='max' className='w-16 pl-2 bg-transparent border rounded-md outline-none appearance-none' />
-                            <button className='px-3 ml-3 border rounded-md'>Find</button>
+                            <input type='number' id='max' className='w-16 pl-2 bg-transparent border rounded-md outline-none appearance-none focus:border-green-400' />
+                            <button className='px-3 ml-3 text-green-400 border border-green-400 rounded-md'>Find</button>
                         </div>
                     </form>
-                    <select defaultValue='' onChange={onChangeAttribute} className='w-full px-3 py-1 border rounded-md'>
-                        <option value='' className='hidden' disabled>Select traits</option>
-                        {Object.keys(trait).map(key => <option value={key} key={key}>{key}</option>)}
-                    </select>
-                    <div className='flex flex-col items-start pt-3 pl-3'>
-                        {
-                            attr && Object.keys(trait[attr].trait_count).map(key => (
-                                <label key={key} className='flex items-center gap-3'>
-                                    <input type='checkbox' onChange={changeTraits(attr)} value={key} />
-                                    <span>{key} ({trait[attr].trait_count[key]})</span>
-                                </label>
-                            ))
-                        }
+                    <div className='py-5'>
+                        <select defaultValue='' onChange={onChangeAttribute} className='w-full px-3 border rounded-md'>
+                            <option value='' className='hidden' disabled>Select traits</option>
+                            {Object.keys(trait).map(key => <option value={key} key={key}>{key}</option>)}
+                        </select>
+                        <div className='flex flex-col items-start pt-3 pl-3'>
+                            {
+                                attr && Object.keys(trait[attr].trait_count).map(key => (
+                                    <label key={key} className='flex items-center gap-3'>
+                                        <input type='checkbox' onChange={changeTraits(attr)} value={key} />
+                                        <span>{key} ({trait[attr].trait_count[key]})</span>
+                                    </label>
+                                ))
+                            }
+                        </div>
                     </div>
                 </div>
             </div>
