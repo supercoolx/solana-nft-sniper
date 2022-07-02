@@ -12,7 +12,14 @@ function Home() {
 	const [params] = useSearchParams();
 
 	const fetch = () => {
-		axios.get(`https://api.coralcube.io/v1/getCollections?offset=${page * pageSize}&page_size=${pageSize}&name=${params.get('q') || ''}`)
+		axios.get(`https://api.coralcube.io/v1/getCollections?offset=${page * pageSize}&page_size=${pageSize}&name=${params.get('q') || ''}`, {
+			headers: {
+				authority: 'api-mainnet.magiceden.io',
+				accept: 'application/json, text/plain, */*',
+				origin: 'https://magiceden.io',
+                referer: 'https://magiceden.io/'
+			}
+		})
 			.then(res => {
 				setCollections(collections.concat(res.data));
 				setPage(page + 1);
